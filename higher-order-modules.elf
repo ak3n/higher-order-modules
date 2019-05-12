@@ -1,0 +1,359 @@
+ty : type.
+term : type.
+sig : type.
+mod : type.
+purity : type.
+empty : type.
+
+% Types
+ty/type : mod -> ty.
+ty/pi : sig -> (mod -> ty) -> ty.
+ty/prod : ty -> ty -> ty.
+
+% Terms
+term/val : mod -> term.
+term/pair : term -> term -> term.
+term/proj1 : term -> term.
+term/proj2 : term -> term.
+term/app : term -> mod -> term.
+term/fix : sig -> (mod -> (mod -> term)) -> term.
+
+% Signatures
+sig/trivial : sig.
+sig/atomic_type : ty -> sig.
+sig/atomic_term : ty -> sig.
+sig/total_functor : sig -> (mod -> sig) -> sig.
+sig/partial_functor : sig -> (mod -> sig) -> sig.
+sig/sum : sig -> (mod -> sig) -> sig.
+sig/singleton : sig -> mod -> sig.
+
+% Modules
+mod/void : mod.
+mod/atomic_type : ty -> mod.
+mod/atomic_term : term -> ty -> mod.
+mod/lam : sig -> (mod -> mod) -> mod.
+mod/app : mod -> mod -> mod.
+mod/pair : mod -> (mod -> mod) -> mod.
+mod/proj1 : mod -> mod.
+mod/proj2 : mod -> mod.
+mod/strong_seal : mod -> sig -> mod.
+mod/weak_seal : mod -> sig -> mod.
+
+purity/wellformed : purity.
+purity/static : purity.
+purity/dynamic : purity.
+purity/pure : purity.
+
+wf-type : ty -> type.
+wf-sig : sig -> type.
+wf-mod : purity -> mod -> sig -> type.
+wf-term : term -> ty -> type.
+
+% Purity operations
+purity/<= : purity -> purity -> type.
+purity/meet : purity -> purity -> purity.
+purity/join : purity -> purity -> purity.
+
+purity-eq : purity -> purity -> type.
+purity-eq/wellwormed : purity-eq purity/wellformed purity/wellformed.
+purity-eq/static : purity-eq purity/static purity/static.
+purity-eq/dynamic : purity-eq purity/dynamic purity/dynamic.
+purity-eq/pure : purity-eq purity/pure purity/pure.
+	     
+% Well-formed types
+wf-type/typ : wf-mod purity/pure M (sig/atomic_type T)
+            -> wf-type (ty/type M).
+
+wf-type/pi : ({s: mod} wf-mod K s O -> wf-type (T s))
+	  -> wf-type (ty/pi O ([s] T s)).
+
+wf-type/prod : wf-type T1
+	    -> wf-type T2
+	    -> wf-type (ty/prod T1 T2).
+
+type= : ty -> ty -> type.
+sig= : sig -> sig -> type.
+mod= : mod -> mod -> sig -> type.
+sig<= : sig -> sig -> type.
+
+% Type equivalence
+type=/pi : sig= O1 O2
+	-> ({s:mod} wf-mod K s O -> type= (T1 s) (T2 s))
+	-> type= (ty/pi O1 ([s] T1 s)) (ty/pi O2 ([s] T2 s)).
+
+type=/prod : type= T1' T2'
+	  -> type= T1'' T2''
+	  -> type= (ty/prod T1' T1'') (ty/prod T2' T2'').
+
+type=/ty : mod= (mod/atomic_type T1) (mod/atomic_type T2) (sig/atomic_type T)
+        -> type= T1 T2.
+
+% Well-formed terms
+wf-term/term : wf-term E T'
+	    -> type= T T'
+	    -> wf-term E T.
+
+wf-term/val : wf-mod K M (sig/atomic_term T)
+           -> wf-term (term/val M) T.
+
+wf-term/fix : ({f:mod} wf-mod K' f (sig/atomic_term (ty/pi O ([s] T s))) -> ({s:mod} wf-mod K s O -> wf-term ((E s) f) (T s)))
+           -> wf-term (term/fix O ([f] ([s] (E s) f))) (ty/pi O ([s] T s)).
+
+wf-term/app : wf-term E (ty/pi O ([s] T s))
+	   -> wf-mod purity/pure M O
+	   -> wf-term (term/app E M) (T M).
+
+wf-term/pair : wf-term E' T'
+	    -> wf-term E'' T''
+	    -> wf-term (term/pair E' E'') (ty/prod T' T'').
+
+wf-term/proj1 : wf-term E (ty/prod T' T'')
+             -> wf-term (term/proj1 E) T'.
+
+wf-term/proj2 : wf-term E (ty/prod T' T'')
+             -> wf-term (term/proj2 E) T''.
+
+% Well-formed signatures
+wf-sig/trivial : wf-sig sig/trivial.
+
+wf-sig/atomic_type : wf-sig (sig/atomic_type T).
+
+wf-sig/atomic_term : wf-type T
+       	          -> wf-sig (sig/atomic_term T).
+
+wf-sig/singleton : wf-mod purity/pure M (sig/atomic_type T)
+                -> wf-sig (sig/singleton (sig/atomic_type T) M).
+
+wf-sig/total_functor : ({s:mod} wf-mod K s O' -> wf-sig (O'' s))
+                    -> wf-sig (sig/total_functor O' ([s] O'' s)).
+
+wf-sig/partial_functor : ({s:mod} wf-mod K s O' -> wf-sig (O'' s))
+                      -> wf-sig (sig/partial_functor O' ([s] O'' s)).
+
+wf-sig/sum : ({s:mod} wf-mod K s O' -> wf-sig (O'' s))
+          -> wf-sig (sig/sum O' ([s] O'' s)).
+
+% Signature equivalence
+sig=/trivial : sig= sig/trivial sig/trivial.
+
+sig=/atomic_type : sig= (sig/atomic_type T) (sig/atomic_type T).
+
+sig=/atomic_term : type= T1 T2
+		-> sig= (sig/atomic_term T1) (sig/atomic_term T2).
+
+sig=/singleton : mod= M1 M2 O
+              -> sig= (sig/singleton O M1) (sig/singleton O M2).
+
+sig=/total_functor : sig= O2' O1'
+	    -> ({s:mod} wf-mod K s O2' -> sig= (O1'' s) (O2'' s))
+	    -> sig= (sig/total_functor O1' ([s] O1'' s)) (sig/total_functor O2' ([s] O2'' s)).
+
+sig=/partial_functor : sig= O2' O1'
+		-> ({s:mod} wf-mod K s O2' -> sig= (O1'' s) (O2'' s))
+		-> sig= (sig/partial_functor O1' ([s] O1'' s)) (sig/partial_functor O2' ([s] O2'' s)).
+
+sig=/sum : sig= O1' O2'
+        -> ({s:mod} wf-mod K s O1' -> sig= (O1'' s) (O2'' s))
+	-> sig= (sig/sum O1' ([s] O1'' s)) (sig/sum O2' ([s] O2'' s)).
+
+% Signature subtyping
+sig<=/trivial : sig<= sig/trivial sig/trivial.
+
+sig<=/atomic_type : sig<= (sig/atomic_type T) (sig/atomic_type T).
+
+sig<=/atomic_term : type= T1 T2
+  		 -> sig<= (sig/atomic_term T1) (sig/atomic_term T2).
+
+sig<=/singleton<=atomic_type : wf-mod purity/pure M (sig/atomic_type T)
+     			    -> sig<= (sig/singleton (sig/atomic_type T) M) (sig/atomic_type T).
+
+sig<=/singleton : mod= M1 M2 (sig/atomic_type T)
+               -> sig<= (sig/singleton (sig/atomic_type T) M1) (sig/singleton (sig/atomic_type T) M2).
+
+sig<=/total_functor : sig<= O2' O1'
+         -> ({s:mod} wf-mod K s O2' -> sig<= (O1'' s) (O2'' s))
+         -> ({s:mod} wf-mod K s O1' -> wf-sig (O1'' s))
+	 -> sig= (sig/total_functor O1' ([s] O1'' s)) (sig/total_functor O2' ([s] O2'' s)).
+
+sig<=/partial_functor : sig<= O2' O1'
+         -> ({s:mod} wf-mod K s O2' -> sig<= (O1'' s) (O2'' s))
+         -> ({s:mod} wf-mod K s O1' -> wf-sig (O1'' s))
+	 -> sig= (sig/partial_functor O1' ([s] O1'' s)) (sig/partial_functor O2' ([s] O2'' s)).
+
+sig<=/total_partial_functor : sig<= O2' O1'
+         -> ({s:mod} wf-mod K s O2' -> sig<= (O1'' s) (O2'' s))
+         -> ({s:mod} wf-mod K s O1' -> wf-sig (O1'' s))
+	 -> sig= (sig/total_functor O1' ([s] O1'' s)) (sig/partial_functor O2' ([s] O2'' s)).
+
+sig<=/sum : sig<= O1' O2'
+         -> ({s:mod} wf-mod K s O1' -> sig<= (O1'' s) (O2'' s))
+         -> ({s:mod} wf-mod K s O2' -> wf-sig (O2'' s))
+	 -> sig= (sig/sum O1' ([s] O1'' s)) (sig/sum O2' ([s] O2'' s)).
+
+% Well-formed modules
+wf-mod/void : wf-mod purity/pure mod/void sig/trivial.
+
+wf-mod/atomic_type : wf-type T
+                  -> wf-mod purity/pure (mod/atomic_type T) (sig/atomic_type T').
+
+wf-mod/atomic_term : wf-term E T
+		  -> wf-type T
+		  -> wf-mod purity/pure (mod/atomic_term E T) (sig/atomic_term T).
+
+wf-mod/lam_total : ({s:mod} wf-mod K s O' -> wf-mod K (M s) (O'' s))
+	        -> purity/<= K purity/dynamic
+	        -> wf-mod K (mod/lam O' ([s] M s)) (sig/total_functor O' ([s] O'' s)).
+
+wf-mod/lam_partial : ({s:mod} wf-mod K s O' -> wf-mod K (M s) (O'' s))
+		  -> ({s:mod} wf-mod K s O' -> wf-sig (O'' s))
+		  -> wf-mod (purity/meet K purity/dynamic) (mod/lam O' ([s] M s)) (sig/partial_functor O' ([s] O'' s)). 
+
+wf-mod/app_total : wf-mod K F (sig/total_functor O' ([s] O'' s))
+		-> wf-mod purity/pure M O'
+		-> wf-mod K (mod/app F M) (O'' M).
+
+wf-mod/partial_functor : wf-mod K F (sig/partial_functor O' ([s] O'' s))
+		      -> wf-mod purity/pure M O'
+		      -> wf-mod (purity/join K purity/static) (mod/app F M) (O'' M).
+
+wf-mod/pair : wf-mod K M' O'
+	   -> ({s:mod} wf-mod K s O' -> wf-mod K (M'' s) (O'' s))
+	   -> wf-mod K (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)).
+
+wf-mod/proj1 : wf-mod K M (sig/sum O' ([s] O'' s))
+	    -> wf-mod K (mod/proj1 M) O'.
+
+wf-mod/proj2 : wf-mod K M (sig/sum O' ([s] O'' s))
+	    -> wf-mod K (mod/proj2 M) (O'' (mod/proj1 M)).
+
+wf-mod/singleton : wf-mod purity/pure M (sig/atomic_type T)
+	        -> wf-mod purity/pure M (sig/singleton (sig/atomic_type T) M).
+
+wf-mod/weak_sealing : wf-mod K M O
+		   -> wf-mod (purity/join K purity/dynamic) (mod/weak_seal M O) O.
+
+wf-mod/strong_sealing : wf-mod K M O
+	  	     -> wf-mod purity/wellformed (mod/strong_seal M O) O.
+
+wf-mod/extensional : ({s:mod} wf-mod purity/pure s O1 -> wf-mod purity/pure (mod/app M s) (O2 s))
+		  -> wf-mod purity/pure M (sig/total_functor O1 ([s] O2' s))
+		  -> wf-mod purity/pure M (sig/total_functor O1 ([s] O2 s)).
+
+wf-mod/mod : wf-mod K' M O'
+	  -> sig<= O' O
+	  -> purity/<= K' K
+	  -> wf-mod K M O.
+
+% Module equivalence
+mod=/id : wf-mod purity/pure M O
+       -> mod= M M O.
+
+mod=/sym : mod= M2 M1 O
+	-> mod= M1 M2 O.
+
+mod=/trans : mod= M1 M2 O
+          -> mod= M2 M3 O
+	  -> mod= M1 M3 O.    
+
+mod=/atomic_type : type= T1 T2
+		-> mod= (mod/atomic_type T1) (mod/atomic_type T2) T.
+
+mod=/typ : wf-mod purity/pure M (sig/atomic_type T)
+	-> mod= (mod/atomic_type (ty/type M)) M (sig/atomic_type T).
+
+mod=/trivial : wf-mod purity/pure M1 sig/trivial
+	    -> wf-mod purity/pure M2 sig/trivial
+	    -> mod= M1 M2 sig/trivial.
+
+mod=/atomic_term : wf-mod purity/pure M1 (sig/atomic_term T)
+		-> wf-mod purity/pure M1 (sig/atomic_term T)
+		-> mod= M1 M2 (sig/atomic_term T).
+
+mod=/partial_functor : wf-mod purity/pure M1 (sig/partial_functor O' ([s] O'' s))
+		    -> wf-mod purity/pure M2 (sig/partial_functor O' ([s] O'' s))
+		    -> mod= M1 M2 (sig/partial_functor O' ([s] O'' s)).
+
+mod=/lam : sig= O1' O2'
+        -> ({s:mod} wf-mod K s O1' -> mod= (M1 s) (M2 s) (O'' s))
+	-> mod= (mod/lam O1' ([s] M1 s)) (mod/lam O2' ([s] M2 s)) (sig/total_functor O1' ([s] O'' s)).
+
+mod=/app : mod= F1 F2 (sig/total_functor O' ([s] O'' s))
+        -> mod= M1 M2 O'
+	-> mod= (mod/app F1 M1) (mod/app F2 M2) (O'' M1).
+
+mod=/pair : mod= M1' M2' O'
+	 -> ({s:mod} wf-mod K s O' -> mod= (M1'' s) (M2'' s) (O'' s))
+	 -> mod= (mod/pair M1' ([s] M1'' s)) (mod/pair M2' ([s] M2'' s)) (sig/sum O' ([s] O'' s)).
+
+mod=/proj1 : mod= M1 M2 (sig/sum O' ([s] O'' s))
+	  -> mod= (mod/proj1 M1) (mod/proj1 M2) O'.
+
+mod=/proj2 : mod= M1 M2 (sig/sum O' ([s] O'' s))
+	  -> mod= (mod/proj2 M1) (mod/proj2 M2) (O'' (mod/proj1 M1)).
+
+mod=/extensional : ({s:mod} wf-mod K s O1 -> mod= (mod/app M1 s) (mod/app M2 s) (O2 s))
+		-> wf-mod purity/pure M1 (sig/total_functor O1 ([s] O2' s))
+		-> wf-mod purity/pure M2 (sig/total_functor O1 ([s] O2' s))
+		-> mod= M1 M2 (sig/total_functor O1 ([s] O2 s)).
+
+mod=/singleton : wf-mod purity/pure M1 (sig/singleton (sig/atomic_type T) M2)
+    	      -> mod= M1 M2 (sig/singleton (sig/atomic_type T) M2).
+
+% Type-checking
+check : purity -> mod -> sig -> type.
+
+% Synthesis
+synth : purity -> mod -> sig -> type.
+
+check/mod : synth K M O'
+	 -> sig<= O' O
+	 -> check K M O.
+
+synth/void : synth purity/pure mod/void sig/trivial.
+
+synth/atomic_type : wf-type T
+	         -> synth purity/pure (mod/atomic_type T) (sig/singleton (sig/atomic_type T) (mod/atomic_type T)).
+
+synth/atomic_term : wf-term E T
+                 -> synth purity/pure (mod/atomic_term E T) (sig/atomic_term T).
+
+synth/total_lam : ({s:mod} wf-mod K s O' -> synth K (M s) (O'' s))
+               -> purity/<= K purity/dynamic
+	       -> synth K (mod/lam O' ([s] M s)) (sig/total_functor O' ([s] O'' s)).
+
+synth/partial_lam : ({s:mod} wf-mod K s O' -> synth K (M s) (O'' s))
+                 -> purity/<= purity/static K
+	         -> synth (purity/meet K purity/dynamic) (mod/lam O' ([s] M s)) (sig/partial_functor O' ([s] O'' s)).
+
+synth/total_app : synth K F (sig/total_functor O' ([s] O'' s))
+	       -> check purity/pure M O'
+	       -> synth K (mod/app F M) (O'' M).
+
+synth/partial_app : synth K F (sig/partial_functor O' ([s] O'' s))
+	         -> check purity/pure M O'
+	         -> synth (purity/join K purity/static) (mod/app F M) (O'' M).
+
+synth/pair : synth K' M' O'
+ 	  -> ({s:mod} wf-mod K'' s O' -> synth K'' (M'' s) (O'' s))
+ 	  -> (purity-eq (purity/join K' K'') purity/pure -> empty)
+ 	  -> synth (purity/join K' K'') (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)).
+
+synth/proj1 : synth K M (sig/sum O' ([s] O'' s))
+           -> synth K (mod/proj1 M) O'.
+
+synth/proj2 : synth K M (sig/sum O' ([s] O'' s))
+           -> synth K (mod/proj2 M) (O'' (mod/proj1 M)).
+		 
+synth/weak_seal : check K M O
+               -> synth (purity/join K purity/dynamic) (mod/weak_seal M O) O.
+
+synth/strong_seal : check K M O
+                 -> synth purity/wellformed (mod/strong_seal M O) O.
+
+soundness : synth K M O
+	 -> wf-mod K M O
+	 -> type.
+%mode soundness +Dsynth -Dwf-mod.
+
+%worlds () (soundness _ _).
+%total D (soundness D _).
