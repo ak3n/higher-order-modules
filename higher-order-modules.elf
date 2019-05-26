@@ -25,7 +25,7 @@ sig/atomic_term : ty -> sig.
 sig/total_functor : sig -> (mod -> sig) -> sig.
 sig/partial_functor : sig -> (mod -> sig) -> sig.
 sig/sum : sig -> (mod -> sig) -> sig.
-sig/singleton : sig -> mod -> sig.
+sig/singleton : mod -> sig.
 
 % Modules
 mod/void : mod.
@@ -122,7 +122,7 @@ wf-sig/atomic_term : wf-type T
        	          -> wf-sig (sig/atomic_term T).
 
 wf-sig/singleton : wf-mod purity/pure M (sig/atomic_type T)
-                -> wf-sig (sig/singleton (sig/atomic_type T) M).
+                -> wf-sig (sig/singleton M).
 
 wf-sig/total_functor : ({s:mod} wf-mod K s O' -> wf-sig (O'' s))
                     -> wf-sig (sig/total_functor O' ([s] O'' s)).
@@ -141,8 +141,8 @@ sig=/atomic_type : sig= (sig/atomic_type T) (sig/atomic_type T).
 sig=/atomic_term : type= T1 T2
 		-> sig= (sig/atomic_term T1) (sig/atomic_term T2).
 
-sig=/singleton : mod= M1 M2 O
-              -> sig= (sig/singleton O M1) (sig/singleton O M2).
+sig=/singleton : mod= M1 M2 (sig/atomic_type T)
+              -> sig= (sig/singleton M1) (sig/singleton M2).
 
 sig=/total_functor : sig= O2' O1'
 	    -> ({s:mod} wf-mod K s O2' -> sig= (O1'' s) (O2'' s))
@@ -165,10 +165,10 @@ sig<=/atomic_term : type= T1 T2
   		 -> sig<= (sig/atomic_term T1) (sig/atomic_term T2).
 
 sig<=/singleton<=atomic_type : wf-mod purity/pure M (sig/atomic_type T)
-     			    -> sig<= (sig/singleton (sig/atomic_type T) M) (sig/atomic_type T).
+     			    -> sig<= (sig/singleton M) (sig/atomic_type T).
 
 sig<=/singleton : mod= M1 M2 (sig/atomic_type T)
-               -> sig<= (sig/singleton (sig/atomic_type T) M1) (sig/singleton (sig/atomic_type T) M2).
+               -> sig<= (sig/singleton M1) (sig/singleton M2).
 
 sig<=/total_functor : sig<= O2' O1'
          -> ({s:mod} wf-mod K s O2' -> sig<= (O1'' s) (O2'' s))
@@ -194,7 +194,7 @@ sig<=/sum : sig<= O1' O2'
 wf-mod/void : wf-mod purity/pure mod/void sig/trivial.
 
 wf-mod/atomic_type : wf-type T
-                  -> wf-mod purity/pure (mod/atomic_type T) (sig/atomic_type T').
+                  -> wf-mod purity/pure (mod/atomic_type T) (sig/atomic_type T).
 
 wf-mod/atomic_term : wf-term E T
 		  -> wf-type T
@@ -227,7 +227,7 @@ wf-mod/proj2 : wf-mod K M (sig/sum O' ([s] O'' s))
 	    -> wf-mod K (mod/proj2 M) (O'' (mod/proj1 M)).
 
 wf-mod/singleton : wf-mod purity/pure M (sig/atomic_type T)
-	        -> wf-mod purity/pure M (sig/singleton (sig/atomic_type T) M).
+	        -> wf-mod purity/pure M (sig/singleton M).
 
 wf-mod/weak_sealing : wf-mod K M O
 		   -> wf-mod (purity/join K purity/dynamic) (mod/weak_seal M O) O.
@@ -296,8 +296,8 @@ mod=/extensional : ({s:mod} wf-mod K s O1 -> mod= (mod/app M1 s) (mod/app M2 s) 
 		-> wf-mod purity/pure M2 (sig/total_functor O1 ([s] O2' s))
 		-> mod= M1 M2 (sig/total_functor O1 ([s] O2 s)).
 
-mod=/singleton : wf-mod purity/pure M1 (sig/singleton (sig/atomic_type T) M2)
-    	      -> mod= M1 M2 (sig/singleton (sig/atomic_type T) M2).
+mod=/singleton : wf-mod purity/pure M1 (sig/singleton M2)
+    	      -> mod= M1 M2 (sig/singleton M2).
 
 % Type-checking
 check : purity -> mod -> sig -> type.
@@ -312,7 +312,7 @@ check/mod : synth K M O'
 synth/void : synth purity/pure mod/void sig/trivial.
 
 synth/atomic_type : wf-type T
-	         -> synth purity/pure (mod/atomic_type T) (sig/singleton (sig/atomic_type T) (mod/atomic_type T)).
+	         -> synth purity/pure (mod/atomic_type T) (sig/singleton (mod/atomic_type T)).
 
 synth/atomic_term : wf-term E T
                  -> synth purity/pure (mod/atomic_term E T) (sig/atomic_term T).
@@ -353,7 +353,11 @@ synth/strong_seal : check K M O
 soundness : synth K M O
 	 -> wf-mod K M O
 	 -> type.
-%mode soundness +Dsynth -Dwf-mod.
+%mode soundness +Dsynth -Dwfmod.
+
+soundness/void : soundness synth/void wf-mod/void.
+
+soundness/atomic_type : soundness (synth/atomic_type Dt) (wf-mod/singleton (wf-mod/atomic_type Dt)).
 
 %worlds () (soundness _ _).
 %total D (soundness D _).
