@@ -309,12 +309,15 @@ check/mod : synth K M O'
 	 -> sig<= O' O
 	 -> check K M O.
 
+synth/singleton : synth purity/pure M (sig/singleton M).
+
 synth/void : synth purity/pure mod/void sig/trivial.
 
 synth/atomic_type : wf-type T
 	         -> synth purity/pure (mod/atomic_type T) (sig/singleton (mod/atomic_type T)).
 
 synth/atomic_term : wf-term E T
+                 -> wf-type T % FIXME: not in the paper
                  -> synth purity/pure (mod/atomic_term E T) (sig/atomic_term T).
 
 synth/total_lam : ({s:mod} wf-mod K s O' -> synth K (M s) (O'' s))
@@ -358,6 +361,8 @@ soundness : synth K M O
 soundness/void : soundness synth/void wf-mod/void.
 
 soundness/atomic_type : soundness (synth/atomic_type Dt) (wf-mod/singleton (wf-mod/atomic_type Dt)).
+
+soundness/atomic_term : soundness (synth/atomic_term Dtm Dty) (wf-mod/atomic_term Dtm Dty).
 
 %worlds () (soundness _ _).
 %total D (soundness D _).
