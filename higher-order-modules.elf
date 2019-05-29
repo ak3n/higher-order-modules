@@ -229,10 +229,10 @@ wf-mod/proj2 : wf-mod K M (sig/sum O' ([s] O'' s))
 wf-mod/singleton : wf-mod purity/pure M (sig/atomic_type T)
 	        -> wf-mod purity/pure M (sig/singleton M).
 
-wf-mod/weak_sealing : wf-mod K M O
+wf-mod/weak_seal : wf-mod K M O
 		   -> wf-mod (purity/join K purity/dynamic) (mod/weak_seal M O) O.
 
-wf-mod/strong_sealing : wf-mod K M O
+wf-mod/strong_seal : wf-mod K M O
 	  	     -> wf-mod purity/wellformed (mod/strong_seal M O) O.
 
 wf-mod/extensional : ({s:mod} wf-mod purity/pure s O1 -> wf-mod purity/pure (mod/app M s) (O2 s))
@@ -309,8 +309,6 @@ check/mod : synth K M O'
 	 -> sig<= O' O
 	 -> check K M O.
 
-synth/singleton : synth purity/pure M (sig/singleton M).
-
 synth/void : synth purity/pure mod/void sig/trivial.
 
 synth/atomic_type : wf-type T
@@ -337,7 +335,7 @@ synth/partial_app : synth K F (sig/partial_functor O' ([s] O'' s))
 	         -> synth (purity/join K purity/static) (mod/app F M) (O'' M).
 
 synth/pair : synth K' M' O'
- 	  -> ({s:mod} wf-mod K'' s O' -> synth K'' (M'' s) (O'' s))
+ 	  -> ({s:mod} wf-mod K' s O' -> synth K'' (M'' s) (O'' s))
  	  -> (purity-eq (purity/join K' K'') purity/pure -> empty)
  	  -> synth (purity/join K' K'') (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)).
 
@@ -353,16 +351,37 @@ synth/weak_seal : check K M O
 synth/strong_seal : check K M O
                  -> synth purity/wellformed (mod/strong_seal M O) O.
 
-soundness : synth K M O
+sc : type.
+sc/c : check K M O -> sc.
+sc/s : synth K M O -> sc.
+
+soundness : sc
 	 -> wf-mod K M O
 	 -> type.
-%mode soundness +Dsynth -Dwfmod.
+%mode soundness +Dsc -Dwfmod.
 
-soundness/void : soundness synth/void wf-mod/void.
+soundness/check : soundness (sc/s Ds) Dm
+               -> soundness (sc/c (check/mod Ds Dsub)) Dm.
 
-soundness/atomic_type : soundness (synth/atomic_type Dt) (wf-mod/singleton (wf-mod/atomic_type Dt)).
+soundness/void : soundness (sc/s synth/void) wf-mod/void.
 
-soundness/atomic_term : soundness (synth/atomic_term Dtm Dty) (wf-mod/atomic_term Dtm Dty).
+soundness/atomic_type : soundness (sc/s (synth/atomic_type Dt)) (wf-mod/singleton (wf-mod/atomic_type Dt)).
+
+soundness/atomic_term : soundness (sc/s (synth/atomic_term Dtm Dty)) (wf-mod/atomic_term Dtm Dty).
+
+soundness/pair : soundness (sc/s Ds) Dm
+              -> soundness (sc/s Ds') Dm'
+              -> soundness (sc/s (synth/pair (Ds : synth K M' O') ([s] [wm] (Ds' : synth (purity/join K' K'') (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)))) Deq)) (wf-mod/pair (Dm : wf-mod K M' O') ([s] [wm] (Dm' : wf-mod K (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s))))).
+
+soundness/proj1 : soundness (sc/s Ds) Dm -> soundness (sc/s (synth/proj1 Ds)) (wf-mod/proj1 Dm).
+
+soundness/proj2 : soundness (sc/s Ds) Dm -> soundness (sc/s (synth/proj2 Ds)) (wf-mod/proj2 Dm).
+
+soundness/weak_seal : soundness (sc/c Dcheck) Dm
+                   -> soundness (sc/s (synth/weak_seal Dcheck)) (wf-mod/weak_seal Dm).
+
+soundness/strong_seal : soundness (sc/c Dcheck) Dm
+                     -> soundness (sc/s (synth/strong_seal Dcheck)) (wf-mod/strong_seal Dm).
 
 %worlds () (soundness _ _).
-%total D (soundness D _).
+% %total D (soundness D _).
