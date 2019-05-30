@@ -351,37 +351,38 @@ synth/weak_seal : check K M O
 synth/strong_seal : check K M O
                  -> synth purity/wellformed (mod/strong_seal M O) O.
 
-sc : type.
-sc/c : check K M O -> sc.
-sc/s : synth K M O -> sc.
+soundness : synth K M O
+      	 -> wf-mod K M O
+	       -> type.
+%mode soundness +Dsynth -Dwfmod.
 
-soundness : sc
-	 -> wf-mod K M O
-	 -> type.
-%mode soundness +Dsc -Dwfmod.
+soundness_check : check K M O
+               -> wf-mod K M O
+               -> type.
+%mode soundness_check +Dcheck -Dwfmod.
 
-soundness/check : soundness (sc/s Ds) Dm
-               -> soundness (sc/c (check/mod Ds Dsub)) Dm.
+soundness/void : soundness synth/void wf-mod/void.
 
-soundness/void : soundness (sc/s synth/void) wf-mod/void.
+soundness/atomic_type : soundness (synth/atomic_type Dt) (wf-mod/singleton (wf-mod/atomic_type Dt)).
 
-soundness/atomic_type : soundness (sc/s (synth/atomic_type Dt)) (wf-mod/singleton (wf-mod/atomic_type Dt)).
+soundness/atomic_term : soundness (synth/atomic_term Dtm Dty) (wf-mod/atomic_term Dtm Dty).
 
-soundness/atomic_term : soundness (sc/s (synth/atomic_term Dtm Dty)) (wf-mod/atomic_term Dtm Dty).
+% soundness/pair : soundness Ds Dm
+%              -> soundness Ds' Dm'
+%               -> soundness (synth/pair (Ds : synth K M' O') ([s] [wm] (Ds' : synth (purity/join K' K'') (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)))) Deq) (wf-mod/pair (Dm : wf-mod K M' O') ([s] [wm] (Dm' : wf-mod K (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s))))).
 
-soundness/pair : soundness (sc/s Ds) Dm
-              -> soundness (sc/s Ds') Dm'
-              -> soundness (sc/s (synth/pair (Ds : synth K M' O') ([s] [wm] (Ds' : synth (purity/join K' K'') (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s)))) Deq)) (wf-mod/pair (Dm : wf-mod K M' O') ([s] [wm] (Dm' : wf-mod K (mod/pair M' ([s] M'' s)) (sig/sum O' ([s] O'' s))))).
+soundness/proj1 : soundness Ds Dm -> soundness (synth/proj1 Ds) (wf-mod/proj1 Dm).
 
-soundness/proj1 : soundness (sc/s Ds) Dm -> soundness (sc/s (synth/proj1 Ds)) (wf-mod/proj1 Dm).
+soundness/proj2 : soundness Ds Dm -> soundness (synth/proj2 Ds) (wf-mod/proj2 Dm).
 
-soundness/proj2 : soundness (sc/s Ds) Dm -> soundness (sc/s (synth/proj2 Ds)) (wf-mod/proj2 Dm).
+soundness/weak_seal : soundness_check Dcheck Dm
+                   -> soundness (synth/weak_seal Dcheck) (wf-mod/weak_seal Dm).
 
-soundness/weak_seal : soundness (sc/c Dcheck) Dm
-                   -> soundness (sc/s (synth/weak_seal Dcheck)) (wf-mod/weak_seal Dm).
+soundness/strong_seal : soundness_check Dcheck Dm
+                     -> soundness (synth/strong_seal Dcheck) (wf-mod/strong_seal Dm).
 
-soundness/strong_seal : soundness (sc/c Dcheck) Dm
-                     -> soundness (sc/s (synth/strong_seal Dcheck)) (wf-mod/strong_seal Dm).
+soundness_check/mod : soundness Ds Dm
+  -> soundness_check (check/mod Ds Dsub) Dm.
 
-%worlds () (soundness _ _).
-% %total D (soundness D _).
+%worlds () (soundness_check _ _) (soundness _ _).
+%total (C D) (soundness_check C _) (soundness D _).
